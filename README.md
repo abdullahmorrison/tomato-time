@@ -1,4 +1,4 @@
-# Tomato Time
+# Tomato'd
 
 Let Twitch chat throw tomatoes at you, live on stream.
 
@@ -22,7 +22,7 @@ No download, no login, no account to connect, nothing to install.
 Get your link from the setup page, or use it directly:
 
 ```
-https://abdullahmorrison.github.io/tomato-time/overlay.html?channel=YOUR_CHANNEL
+https://abdullahmorrison.github.io/tomatod/overlay.html?channel=YOUR_CHANNEL
 ```
 
 Only mods and the broadcaster can start a round — regular chatters can't.

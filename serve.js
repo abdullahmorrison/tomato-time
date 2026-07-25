@@ -46,6 +46,6 @@ http
     });
   })
   .listen(PORT, () => {
-    console.log(`Tomato Time dev server: http://localhost:${PORT}`);
+    console.log(`Tomato'd dev server: http://localhost:${PORT}`);
     console.log(`Overlay: http://localhost:${PORT}/overlay.html?channel=tenzinniznet&debug=on`);
   });
