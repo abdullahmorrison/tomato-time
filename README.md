@@ -1,4 +1,4 @@
-# Tomato'd
+# 🍅 Tomato'd
 
 Let Twitch chat throw tomatoes at you, live on stream.
 
