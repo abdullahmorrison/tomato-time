@@ -3,7 +3,7 @@
 Let Twitch chat throw tomatoes at you, live on stream.
 
 A mod (or the broadcaster) types `!tomato`. A countdown appears in the corner, and for
-the next 30 seconds anyone who types `tomatoTime` hurls a tomato from the viewer's side
+the next 30 seconds anyone who types `TomatoTime` hurls a tomato from the viewer's side
 of the screen at the streamer, where it splatters. A busy chat buries the shot. When the
 timer runs out, the screen wipes clean.
 
@@ -73,7 +73,7 @@ All settings live in the overlay URL — the setup page writes them for you.
 | `channel` | *(required)* | Twitch channel to read |
 | `duration` | `30` | Round length in seconds |
 | `corner` | `bottom-right` | Timer position (`bottom-left`, `top-right`, `top-left`) |
-| `word` | `tomatoTime` | Trigger text, matched case-insensitively as a whole word |
+| `word` | `TomatoTime` | Trigger text, matched case-insensitively as a whole word |
 | `command` | `!tomato` | Command that starts a round |
 | `maxInFlight` | `120` | Concurrent airborne tomato cap |
 | `wipeMs` | `800` | Screen wipe duration at round end |

@@ -1,5 +1,5 @@
 // Pixel-art tomato, generated at 16x16 and drawn upscaled with smoothing off so it
-// stays crisp and blocky at any size. Matches the look of the tomatoTime 7TV emote.
+// stays crisp and blocky at any size. Matches the look of the TomatoTime 7TV emote.
 
 const SIZE = 16;
 

@@ -4,15 +4,15 @@
 const CORNERS = ['bottom-right', 'bottom-left', 'top-right', 'top-left'];
 
 // Logins that may start a round on any channel, whatever badges they hold. This is
-// the overlay's author, so it can be triggered on a channel where he isn't a mod.
-// The `allow` URL param adds to this list rather than replacing it.
+// the overlay's author, so it can be triggered on a channel where they hold no mod
+// badge. The `allow` URL param adds to this list rather than replacing it.
 const DEFAULT_ALLOW = ['abdullahmorrison'];
 
 const DEFAULTS = {
   channel: '',
   duration: 30,
   corner: 'bottom-right',
-  word: 'tomatoTime',
+  word: 'TomatoTime',
   command: '!tomato',
   maxInFlight: 120,
   wipeMs: 800,
