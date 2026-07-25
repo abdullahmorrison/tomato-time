@@ -55,7 +55,9 @@ class Tomato {
     // every impact is the same size and the flood looks flat.
     const depth = 1 - this.y2 / h;
     this.zFar = 2.15 + depth * 1.5 + rand(-0.15, 0.15);
-    this.nearSize = rand(105, 155);
+    // Sized as a fraction of the canvas rather than in fixed pixels, so it looks the
+    // same whether the source is 720p or 1080p.
+    this.nearSize = h * rand(0.17, 0.245);
     this.angle = rand(0, Math.PI * 2);
     this.spin = rand(2.2, 7) * (Math.random() < 0.5 ? -1 : 1);
     return this;

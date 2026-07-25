@@ -72,6 +72,7 @@ All settings live in the overlay URL — the setup page writes them for you.
 | `maxInFlight` | `120` | Concurrent airborne tomato cap |
 | `wipeMs` | `800` | Screen wipe duration at round end |
 | `debug` | `off` | Status panel plus keyboard tests |
+| `demo` | `off` | Runs a round by itself, to watch the effect without chat |
 
 A mod can also start a longer round with `!tomato 60`.
 
@@ -95,6 +96,9 @@ can be exercised with no chat and no mod:
 ```
 http://localhost:4747/overlay.html?channel=tenzinniznet&debug=on
 ```
+
+To watch it run with no chat and no keypresses — useful for checking it inside OBS —
+append `&demo=1` to the overlay URL.
 
 If OBS runs on Windows while this serves from WSL, `localhost` forwards automatically —
 no extra setup.

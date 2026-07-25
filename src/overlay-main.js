@@ -77,6 +77,15 @@ if (config.channel) {
   chat.connect();
 }
 
+// --- demo -----------------------------------------------------------------
+// Runs a round with a steady stream of throws, so the effect can be checked in OBS
+// without waiting for chat.
+
+if (config.demo) {
+  show.start(config.duration);
+  setInterval(() => show.throwOne(), 90);
+}
+
 // --- debug ----------------------------------------------------------------
 // Lets the whole visual path be exercised without a mod, a round, or even a chat.
 

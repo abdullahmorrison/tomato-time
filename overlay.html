@@ -12,11 +12,14 @@
     overflow: hidden;
     background: transparent;
   }
-  canvas, .timer, .status {
+  /* Scoped to the two full-screen layers by class. A bare `canvas` selector also
+     catches the small tomato inside the timer badge and rips it out of the flex
+     row. */
+  .layer, .timer, .status {
     position: fixed;
     pointer-events: none;
   }
-  canvas {
+  .layer {
     top: 0;
     left: 0;
     width: 100%;
@@ -90,8 +93,8 @@
 </style>
 </head>
 <body>
-  <canvas id="splat"></canvas>
-  <canvas id="front"></canvas>
+  <canvas class="layer" id="splat"></canvas>
+  <canvas class="layer" id="front"></canvas>
 
   <div class="timer" id="timer">
     <canvas class="timer-icon" id="timerIcon" width="16" height="16"></canvas>

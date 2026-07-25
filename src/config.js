@@ -12,6 +12,7 @@ const DEFAULTS = {
   maxInFlight: 120,
   wipeMs: 800,
   debug: false,
+  demo: false,
 };
 
 function int(value, fallback, min, max) {
@@ -34,6 +35,8 @@ export function readConfig(search = window.location.search) {
     maxInFlight: int(q.get('maxInFlight'), DEFAULTS.maxInFlight, 10, 400),
     wipeMs: int(q.get('wipeMs'), DEFAULTS.wipeMs, 0, 5000),
     debug: q.get('debug') === 'on' || q.get('debug') === '1',
+    // Runs a round on its own, so the effect can be watched without chat.
+    demo: q.get('demo') === 'on' || q.get('demo') === '1',
   };
 }
 

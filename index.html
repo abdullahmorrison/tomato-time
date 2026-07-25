@@ -111,7 +111,8 @@
     border: 1px solid var(--line);
     margin-bottom: 14px;
   }
-  .preview canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  /* Must not match the tomato inside the timer badge, which is also a descendant. */
+  .preview > .layer { position: absolute; inset: 0; width: 100%; height: 100%; }
   .preview .hint {
     position: absolute;
     inset: 0;
@@ -232,8 +233,8 @@
     <h2>5 · See it first</h2>
     <p class="help">This is exactly what lands on your stream.</p>
     <div class="preview" id="preview">
-      <canvas id="pSplat"></canvas>
-      <canvas id="pFront"></canvas>
+      <canvas class="layer" id="pSplat"></canvas>
+      <canvas class="layer" id="pFront"></canvas>
       <div class="timer" id="pTimer">
         <canvas class="timer-icon" id="pIcon" width="16" height="16"></canvas>
         <span class="timer-value">30</span>
