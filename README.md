@@ -78,6 +78,7 @@ All settings live in the overlay URL — the setup page writes them for you.
 | `corner` | `bottom-right` | Timer position (`bottom-left`, `top-right`, `top-left`) |
 | `word` | `TomatoTime` | Trigger text, matched case-insensitively as a whole word |
 | `command` | `!tomato` | Command that starts a round |
+| `cancel` | `!wipe` | Command that ends a round early and clears the screen |
 | `maxInFlight` | *(unlimited)* | Optional cap on concurrent tomatoes. Set a number only if a machine can't keep up |
 | `wipeMs` | `800` | Screen wipe duration at round end |
 | `debug` | `off` | Status panel plus keyboard tests |
@@ -85,6 +86,10 @@ All settings live in the overlay URL — the setup page writes them for you.
 | `allow` | *(none)* | Extra logins that may start a round without being a mod, comma-separated |
 
 A mod can also start a longer round with `!tomato 60`.
+
+To end a round early and wipe the screen, type `!wipe` — or `!tomato stop`, which also
+accepts `cancel`, `end`, `wipe` and `clear`. Anything still in the air fades out with
+the splatter rather than vanishing mid-flight. Same permissions as starting a round.
 
 ## Development
 

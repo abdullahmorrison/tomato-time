@@ -1,5 +1,5 @@
 import { readConfig } from './config.js';
-import { TwitchChat, hasTrigger, parseCommand } from './twitch-chat.js';
+import { TwitchChat, hasTrigger, parseCommand, isCancel } from './twitch-chat.js';
 import { TomatoShow } from './round.js';
 import { tomatoSprite } from './sprite.js';
 
@@ -63,6 +63,12 @@ if (config.channel) {
       setStatus(`Ready — reading #${config.channel}. Type ${config.command} to start.`);
     }
 
+    // Checked before the start command, so `!tomato stop` cannot start a round.
+    if (isCancel(message, config.cancel, config.command, config.allow)) {
+      show.cancel();
+      return;
+    }
+
     const requested = parseCommand(message, config.command, config.duration, config.allow);
     if (requested !== null) {
       show.start(requested);
@@ -102,7 +108,7 @@ if (config.debug) {
     panel.textContent =
       `state: ${show.state} · in flight: ${show.pool.liveCount}/${cap}` +
       ` · pooled: ${show.pool.created} · chat msgs: ${messagesSeen}` +
-      ' · [R] round  [T] throw  [Y] throw 50';
+      ' · [R] round  [T] throw  [Y] throw 50  [C] cancel';
   };
   refresh();
   setInterval(refresh, 200);
@@ -112,5 +118,6 @@ if (config.debug) {
     if (key === 'r') show.start(config.duration);
     if (key === 't') show.throwOne();
     if (key === 'y') for (let i = 0; i < 50; i++) show.throwOne();
+    if (key === 'c') show.cancel();
   });
 }

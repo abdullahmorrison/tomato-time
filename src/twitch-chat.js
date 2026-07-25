@@ -153,13 +153,42 @@ export function hasTrigger(text, word) {
  * overlay can be triggered on a channel where they are not a moderator.
  */
 export function parseCommand(message, command, defaultDuration, allow = []) {
-  const named = allow.includes(message.login.toLowerCase());
-  if (!message.isMod && !message.isBroadcaster && !named) return null;
-  const parts = message.text.trim().split(/\s+/);
-  if (parts[0].toLowerCase() !== command) return null;
+  if (!canControl(message, allow)) return null;
+  const parts = words(message.text);
+  if (parts[0] !== command) return null;
+  // `!tomato stop` ends a round. Without this it would fall through and read as a
+  // start with an unparseable duration, i.e. the exact opposite of what was asked.
+  if (STOP_WORDS.includes(parts[1])) return null;
+
   const requested = parseInt(parts[1], 10);
   if (Number.isFinite(requested)) {
     return Math.min(600, Math.max(5, requested));
   }
   return defaultDuration;
+}
+
+const STOP_WORDS = ['stop', 'cancel', 'end', 'wipe', 'clear'];
+
+function words(text) {
+  return text.trim().toLowerCase().split(/\s+/);
+}
+
+/** Whether this person is allowed to start or end a round. */
+export function canControl(message, allow = []) {
+  return (
+    message.isMod ||
+    message.isBroadcaster ||
+    allow.includes(message.login.toLowerCase())
+  );
+}
+
+/**
+ * True if this message ends the round early. Accepts the dedicated cancel command
+ * and, for convenience, `<start command> stop` and its synonyms.
+ */
+export function isCancel(message, cancelCommand, startCommand, allow = []) {
+  if (!canControl(message, allow)) return false;
+  const parts = words(message.text);
+  if (parts[0] === cancelCommand) return true;
+  return parts[0] === startCommand && STOP_WORDS.includes(parts[1]);
 }

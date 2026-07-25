@@ -14,6 +14,7 @@ export class TomatoShow {
   constructor({ frontCanvas, splatCanvas, timerEl, config, host = null }) {
     this.config = config;
     this.splatCanvas = splatCanvas;
+    this.frontCanvas = frontCanvas;
     // `host` lets the setup page render a preview inside a box; the overlay itself
     // fills the window.
     this.host = host;
@@ -54,8 +55,10 @@ export class TomatoShow {
     // the show was constructed.
     this.resize();
     clearTimeout(this.wipeTimer);
-    this.splatCanvas.style.transition = '';
-    this.splatCanvas.style.opacity = '1';
+    for (const layer of this.layers) {
+      layer.style.transition = '';
+      layer.style.opacity = '1';
+    }
     this.state = 'active';
     this.endsAt = performance.now() + durationSec * 1000;
     this.timer.show();
@@ -98,20 +101,43 @@ export class TomatoShow {
     return (
       this.state === 'active' ||
       this.state === 'landing' ||
+      // Keep drawing through the wipe so airborne tomatoes stay animated as they
+      // fade out, rather than freezing in place.
+      this.state === 'wiping' ||
       this.pool.liveCount > 0 ||
       this.splatter.busy
     );
   }
 
+  get layers() {
+    return [this.splatCanvas, this.frontCanvas];
+  }
+
+  /**
+   * End the round now and wipe the screen, rather than waiting out the timer.
+   * Anything still airborne fades along with the splatter instead of popping.
+   */
+  cancel() {
+    if (this.state === 'idle' || this.state === 'wiping') return false;
+    this.timer.hide();
+    this.beginWipe();
+    return true;
+  }
+
   beginWipe() {
     this.state = 'wiping';
     const ms = this.config.wipeMs;
-    this.splatCanvas.style.transition = `opacity ${ms}ms ease-out`;
-    this.splatCanvas.style.opacity = '0';
+    for (const layer of this.layers) {
+      layer.style.transition = `opacity ${ms}ms ease-out`;
+      layer.style.opacity = '0';
+    }
     this.wipeTimer = setTimeout(() => {
+      this.pool.clear();
       this.splatter.clear();
-      this.splatCanvas.style.transition = '';
-      this.splatCanvas.style.opacity = '1';
+      for (const layer of this.layers) {
+        layer.style.transition = '';
+        layer.style.opacity = '1';
+      }
       this.state = 'idle';
       this.resize();
     }, ms + 40);

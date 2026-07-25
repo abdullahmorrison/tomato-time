@@ -14,6 +14,7 @@ const DEFAULTS = {
   corner: 'bottom-right',
   word: 'TomatoTime',
   command: '!tomato',
+  cancel: '!wipe',
   // No ceiling: if chat floods, all of it lands on screen.
   maxInFlight: Infinity,
   wipeMs: 800,
@@ -51,6 +52,7 @@ export function readConfig(search = window.location.search) {
     corner: CORNERS.includes(corner) ? corner : DEFAULTS.corner,
     word: (q.get('word') || DEFAULTS.word).trim(),
     command: (q.get('command') || DEFAULTS.command).trim().toLowerCase(),
+    cancel: (q.get('cancel') || DEFAULTS.cancel).trim().toLowerCase(),
     maxInFlight: parseCap(q.get('maxInFlight')),
     wipeMs: int(q.get('wipeMs'), DEFAULTS.wipeMs, 0, 5000),
     debug: q.get('debug') === 'on' || q.get('debug') === '1',
