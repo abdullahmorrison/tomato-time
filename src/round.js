@@ -24,7 +24,6 @@ export class TomatoShow {
 
     this.state = 'idle';
     this.endsAt = 0;
-    this.queued = 0;
     this.wipeTimer = null;
     this.width = 0;
     this.height = 0;
@@ -65,10 +64,11 @@ export class TomatoShow {
     return true;
   }
 
-  /** Queue one tomato. Extra throws during a flood wait for a free slot. */
+  /** Launch one tomato. Ignored outside an active round. */
   throwOne() {
-    this.queued++;
+    if (this.state !== 'active') return;
     this.renderer.start();
+    this.pool.spawn(this.width, this.height);
   }
 
   frame(dt, ctx) {
@@ -79,18 +79,7 @@ export class TomatoShow {
       this.timer.update(left);
       if (left <= 0) {
         this.state = 'landing';
-        this.queued = 0;
         this.timer.hide();
-      }
-    }
-
-    // Drain the queue a few at a time so a burst still arrives as a burst without
-    // every tomato launching on the identical frame.
-    if (this.state === 'active') {
-      let budget = 6;
-      while (this.queued > 0 && budget-- > 0 && !this.pool.full) {
-        if (this.pool.spawn(this.width, this.height)) this.queued--;
-        else break;
       }
     }
 

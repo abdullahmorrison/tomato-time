@@ -105,52 +105,72 @@ class Tomato {
 }
 
 /**
- * Fixed-size pool of tomatoes. Nothing is allocated once the pool is built, so a
- * flood of chat messages cannot trigger garbage collection mid-round.
+ * Pool of tomatoes, unlimited by default.
+ *
+ * Landed tomatoes go back on a free list and are reused, so a long round settles at
+ * whatever the busiest moment needed and stops allocating entirely. Growth only
+ * happens when a flood exceeds every tomato ever created at once, which keeps the
+ * garbage collector out of the middle of a round without imposing a ceiling.
+ *
+ * `limit` is Infinity unless someone explicitly caps it, e.g. on a machine where the
+ * encoder is fighting for the GPU.
  */
 export class TomatoPool {
-  constructor(capacity) {
-    this.capacity = capacity;
-    this.items = Array.from({ length: capacity }, () => new Tomato());
-    this.liveCount = 0;
+  constructor(limit = Infinity) {
+    this.limit = limit;
+    this.live = [];
+    this.free = [];
+    this.created = 0;
+    // Pre-build a modest batch so the first busy round is not allocating.
+    const seed = Math.min(64, Number.isFinite(limit) ? limit : 64);
+    for (let i = 0; i < seed; i++) {
+      this.free.push(new Tomato());
+      this.created++;
+    }
   }
 
-  /** Launch one tomato, or return null if every slot is already in flight. */
-  spawn(w, h) {
-    for (const item of this.items) {
-      if (!item.active) {
-        this.liveCount++;
-        return item.launch(w, h);
-      }
-    }
-    return null;
+  get liveCount() {
+    return this.live.length;
   }
 
   get full() {
-    return this.liveCount >= this.capacity;
+    return this.live.length >= this.limit;
   }
 
-  /** Advance all live tomatoes, calling onLand for each one that arrives. */
+  /** Launch one tomato. Returns null only when an explicit limit is in force. */
+  spawn(w, h) {
+    if (this.full) return null;
+    let item = this.free.pop();
+    if (!item) {
+      item = new Tomato();
+      this.created++;
+    }
+    this.live.push(item);
+    return item.launch(w, h);
+  }
+
+  /** Advance live tomatoes, calling onLand for each one that arrives. */
   update(dtMs, onLand) {
-    for (const item of this.items) {
-      if (!item.active) continue;
-      if (item.update(dtMs)) {
-        item.active = false;
-        this.liveCount--;
-        onLand(item);
-      }
+    for (let i = this.live.length - 1; i >= 0; i--) {
+      const item = this.live[i];
+      if (!item.update(dtMs)) continue;
+      item.active = false;
+      this.live.splice(i, 1);
+      this.free.push(item);
+      onLand(item);
     }
   }
 
   draw(ctx) {
-    for (const item of this.items) {
-      if (item.active) item.draw(ctx);
-    }
+    for (const item of this.live) item.draw(ctx);
   }
 
   clear() {
-    for (const item of this.items) item.active = false;
-    this.liveCount = 0;
+    for (const item of this.live) {
+      item.active = false;
+      this.free.push(item);
+    }
+    this.live.length = 0;
   }
 }
 

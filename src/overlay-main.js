@@ -98,9 +98,10 @@ if (config.debug) {
   document.body.appendChild(panel);
 
   const refresh = () => {
+    const cap = Number.isFinite(config.maxInFlight) ? config.maxInFlight : '∞';
     panel.textContent =
-      `state: ${show.state} · in flight: ${show.pool.liveCount}/${config.maxInFlight}` +
-      ` · queued: ${show.queued} · chat msgs: ${messagesSeen}` +
+      `state: ${show.state} · in flight: ${show.pool.liveCount}/${cap}` +
+      ` · pooled: ${show.pool.created} · chat msgs: ${messagesSeen}` +
       ' · [R] round  [T] throw  [Y] throw 50';
   };
   refresh();

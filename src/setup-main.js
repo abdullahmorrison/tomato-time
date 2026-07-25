@@ -60,7 +60,7 @@ const preview = new TomatoShow({
   splatCanvas: $('pSplat'),
   timerEl: $('pTimer'),
   host: previewEl,
-  config: { ...DEFAULTS, maxInFlight: 90, duration: 8 },
+  config: { ...DEFAULTS, duration: 8 },
 });
 
 function hideHint() {

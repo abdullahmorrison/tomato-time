@@ -49,9 +49,12 @@ Everything is drawn in two stacked canvases:
   in splatter still costs nothing per frame. Cleared by the round-end wipe.
 - **Tomato layer.** Cleared and redrawn each frame; airborne tomatoes only.
 
-Tomatoes are pooled and pre-allocated, so a flood never triggers garbage collection
-mid-round. The frame loop stops completely when nothing is happening — the source sits
-loaded for an entire stream and must cost nothing between rounds.
+There is no cap on how many tomatoes can be in the air: if chat floods, all of it lands.
+Landed tomatoes go onto a free list and are reused, so the pool grows to whatever the
+busiest moment of a round needed and then stops allocating — a flood does not drag the
+garbage collector into the middle of a round. The frame loop stops completely when
+nothing is happening, since the source sits loaded for an entire stream and must cost
+nothing between rounds.
 
 The art is generated in code: a 16×16 pixel tomato and procedural pixel splats, drawn
 upscaled with smoothing off. No image files, no CDN, nothing to fail mid-stream.
@@ -75,7 +78,7 @@ All settings live in the overlay URL — the setup page writes them for you.
 | `corner` | `bottom-right` | Timer position (`bottom-left`, `top-right`, `top-left`) |
 | `word` | `TomatoTime` | Trigger text, matched case-insensitively as a whole word |
 | `command` | `!tomato` | Command that starts a round |
-| `maxInFlight` | `120` | Concurrent airborne tomato cap |
+| `maxInFlight` | *(unlimited)* | Optional cap on concurrent tomatoes. Set a number only if a machine can't keep up |
 | `wipeMs` | `800` | Screen wipe duration at round end |
 | `debug` | `off` | Status panel plus keyboard tests |
 | `demo` | `off` | Runs a round by itself, to watch the effect without chat |

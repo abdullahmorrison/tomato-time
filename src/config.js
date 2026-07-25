@@ -14,12 +14,25 @@ const DEFAULTS = {
   corner: 'bottom-right',
   word: 'TomatoTime',
   command: '!tomato',
-  maxInFlight: 120,
+  // No ceiling: if chat floods, all of it lands on screen.
+  maxInFlight: Infinity,
   wipeMs: 800,
   debug: false,
   demo: false,
   allow: DEFAULT_ALLOW,
 };
+
+/**
+ * Concurrent tomato cap. Unlimited unless a number is given, so it exists only as an
+ * escape hatch for a machine that cannot keep up.
+ */
+function parseCap(value) {
+  if (value === null || value === '') return Infinity;
+  if (/^(0|none|off|unlimited)$/i.test(value.trim())) return Infinity;
+  const n = parseInt(value, 10);
+  if (!Number.isFinite(n) || n <= 0) return Infinity;
+  return Math.max(1, n);
+}
 
 function int(value, fallback, min, max) {
   const n = parseInt(value, 10);
@@ -38,7 +51,7 @@ export function readConfig(search = window.location.search) {
     corner: CORNERS.includes(corner) ? corner : DEFAULTS.corner,
     word: (q.get('word') || DEFAULTS.word).trim(),
     command: (q.get('command') || DEFAULTS.command).trim().toLowerCase(),
-    maxInFlight: int(q.get('maxInFlight'), DEFAULTS.maxInFlight, 10, 400),
+    maxInFlight: parseCap(q.get('maxInFlight')),
     wipeMs: int(q.get('wipeMs'), DEFAULTS.wipeMs, 0, 5000),
     debug: q.get('debug') === 'on' || q.get('debug') === '1',
     // Runs a round on its own, so the effect can be watched without chat.
