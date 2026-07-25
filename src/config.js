@@ -4,7 +4,7 @@
 const CORNERS = ['bottom-right', 'bottom-left', 'top-right', 'top-left'];
 
 // Logins that may start a round on any channel, whatever badges they hold. This is
-// the overlay's author, so it can be triggered on a channel where they hold no mod
+// the overlay's author, so he can trigger it on a channel where he holds no mod
 // badge. The `allow` URL param adds to this list rather than replacing it.
 const DEFAULT_ALLOW = ['abdullahmorrison'];
 
