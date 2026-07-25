@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tomato Time — set up your overlay</title>
+<style>
+  :root {
+    --bg: #14100f;
+    --panel: #1e1918;
+    --panel-2: #272120;
+    --line: #3a312f;
+    --text: #f4eeec;
+    --muted: #a99e9a;
+    --tomato: #e0342a;
+    --tomato-dim: #a3201b;
+    --good: #4ec26b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 40px 20px 80px;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.6 "Segoe UI", system-ui, -apple-system, sans-serif;
+  }
+  .wrap { max-width: 780px; margin: 0 auto; }
+
+  header { display: flex; align-items: center; gap: 16px; margin-bottom: 8px; }
+  header canvas { width: 52px; height: 52px; image-rendering: pixelated; }
+  h1 { margin: 0; font-size: 30px; letter-spacing: -0.01em; }
+  .tagline { color: var(--muted); margin: 0 0 32px; }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 22px 24px;
+    margin-bottom: 18px;
+  }
+  .card h2 {
+    margin: 0 0 4px;
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .card p.help { margin: 0 0 16px; color: var(--muted); font-size: 14px; }
+
+  label { display: block; font-size: 13px; color: var(--muted); margin: 0 0 6px; }
+  input[type="text"], input[type="number"], select {
+    width: 100%;
+    padding: 11px 13px;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    color: var(--text);
+    font: inherit;
+  }
+  input:focus, select:focus { outline: 2px solid var(--tomato); outline-offset: 1px; }
+
+  .row { display: flex; gap: 14px; flex-wrap: wrap; }
+  .row > div { flex: 1 1 180px; }
+
+  .status { margin-top: 10px; font-size: 14px; color: var(--muted); min-height: 22px; }
+  .status.ok { color: var(--good); }
+  .status.warn { color: #e8b04a; }
+
+  .linkbox { display: flex; gap: 10px; margin-top: 4px; }
+  .linkbox input {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 13px;
+  }
+  button {
+    padding: 11px 18px;
+    border-radius: 9px;
+    border: 1px solid transparent;
+    background: var(--tomato);
+    color: #fff;
+    font: 600 15px/1 inherit;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  button:hover { background: #f04437; }
+  button.ghost {
+    background: transparent;
+    border-color: var(--line);
+    color: var(--text);
+    font-weight: 500;
+  }
+  button.ghost:hover { background: var(--panel-2); }
+
+  ol { margin: 0; padding-left: 22px; }
+  ol li { margin-bottom: 9px; }
+  kbd {
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-bottom-width: 2px;
+    border-radius: 5px;
+    padding: 1px 7px;
+    font: 500 13px/1.4 inherit;
+  }
+
+  .preview {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    border-radius: 10px;
+    overflow: hidden;
+    background:
+      repeating-conic-gradient(#2a2423 0% 25%, #221d1c 0% 50%) 50% / 26px 26px;
+    border: 1px solid var(--line);
+    margin-bottom: 14px;
+  }
+  .preview canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .preview .hint {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: var(--muted);
+    font-size: 14px;
+    pointer-events: none;
+  }
+
+  .timer {
+    position: absolute;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 13px 7px 10px;
+    border-radius: 11px;
+    background: rgba(18, 8, 8, 0.72);
+    border: 2px solid rgba(255, 255, 255, 0.14);
+    font: 700 22px/1 "Segoe UI", system-ui, sans-serif;
+    color: #fff;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 200ms ease, transform 200ms ease;
+  }
+  .timer.is-visible { opacity: 1; transform: translateY(0); }
+  .timer[data-corner="bottom-right"] { right: 18px; bottom: 18px; }
+  .timer[data-corner="bottom-left"]  { left: 18px;  bottom: 18px; }
+  .timer[data-corner="top-right"]    { right: 18px; top: 18px; }
+  .timer[data-corner="top-left"]     { left: 18px;  top: 18px; }
+  .timer-icon { width: 22px; height: 22px; image-rendering: pixelated; }
+  .timer-value { min-width: 1.6ch; text-align: center; font-variant-numeric: tabular-nums; }
+  .timer-label {
+    font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
+    text-transform: uppercase; opacity: 0.72;
+  }
+  .timer.is-urgent { border-color: rgba(255, 96, 80, 0.85); }
+
+  .note {
+    font-size: 14px;
+    color: var(--muted);
+    border-left: 3px solid var(--tomato-dim);
+    padding-left: 14px;
+  }
+  code {
+    background: var(--panel-2);
+    padding: 1px 6px;
+    border-radius: 5px;
+    font-size: 14px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <canvas id="logo" width="16" height="16"></canvas>
+    <h1>Tomato Time</h1>
+  </header>
+  <p class="tagline">
+    Let your chat throw tomatoes at you. No download, no login, no account to connect.
+  </p>
+
+  <div class="card">
+    <h2>1 · Your channel</h2>
+    <p class="help">The Twitch channel whose chat the overlay listens to.</p>
+    <input type="text" id="channel" value="tenzinniznet" spellcheck="false" autocomplete="off">
+    <div class="status" id="channelStatus"></div>
+  </div>
+
+  <div class="card">
+    <h2>2 · Options</h2>
+    <p class="help">Fine if you leave these alone.</p>
+    <div class="row">
+      <div>
+        <label for="duration">How long a round lasts (seconds)</label>
+        <input type="number" id="duration" value="30" min="5" max="600">
+      </div>
+      <div>
+        <label for="corner">Where the countdown sits</label>
+        <select id="corner">
+          <option value="bottom-right">Bottom right</option>
+          <option value="bottom-left">Bottom left</option>
+          <option value="top-right">Top right</option>
+          <option value="top-left">Top left</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>3 · Your link</h2>
+    <p class="help">Copy this, then follow the steps below.</p>
+    <div class="linkbox">
+      <input type="text" id="link" readonly>
+      <button id="copy">Copy link</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>4 · Add it to OBS</h2>
+    <ol>
+      <li>In OBS, under <strong>Sources</strong>, click <kbd>+</kbd> and choose <strong>Browser</strong>.</li>
+      <li>Give it a name (<em>Tomato Time</em>) and click <strong>OK</strong>.</li>
+      <li>Paste your link into the <strong>URL</strong> box.</li>
+      <li>Set <strong>Width</strong> to <kbd>1920</kbd> and <strong>Height</strong> to <kbd>1080</kbd>.</li>
+      <li>Click <strong>OK</strong>. Drag the layer to the top of your source list so tomatoes land in front of everything.</li>
+    </ol>
+    <p class="note" style="margin-top:16px">
+      To start a round, you or one of your mods types <code id="cmdHint">!tomato</code> in chat.
+      For the next 30 seconds anyone typing <code>tomatoTime</code> throws a tomato.
+      Only mods and you can start a round — regular chatters can't.
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>5 · See it first</h2>
+    <p class="help">This is exactly what lands on your stream.</p>
+    <div class="preview" id="preview">
+      <canvas id="pSplat"></canvas>
+      <canvas id="pFront"></canvas>
+      <div class="timer" id="pTimer">
+        <canvas class="timer-icon" id="pIcon" width="16" height="16"></canvas>
+        <span class="timer-value">30</span>
+        <span class="timer-label">Tomato&nbsp;Time</span>
+      </div>
+      <div class="hint" id="pHint">Press a button below</div>
+    </div>
+    <div class="row">
+      <button id="demoRound">Start a demo round</button>
+      <button class="ghost" id="demoFew">Throw a few</button>
+      <button class="ghost" id="demoMany">Flood it</button>
+    </div>
+  </div>
+
+</div>
+
+<script type="module" src="./src/setup-main.js"></script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "name": "tomato-time",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Twitch chat throws tomatoes at the streamer. An OBS browser-source overlay with no backend and no login.",
+  "type": "module",
+  "scripts": {
+    "start": "node serve.js"
+  }
+}
