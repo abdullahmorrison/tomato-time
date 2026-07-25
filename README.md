@@ -27,6 +27,10 @@ https://abdullahmorrison.github.io/tomato-time/overlay.html?channel=YOUR_CHANNEL
 
 Only mods and the broadcaster can start a round — regular chatters can't.
 
+`abdullahmorrison` can also start one on any channel without holding a badge (it's in
+`DEFAULT_ALLOW` in `src/config.js`). Add more people with `&allow=name1,name2`, which
+extends that list rather than replacing it.
+
 ## How it works
 
 The page connects straight to Twitch chat over WebSocket using an anonymous `justinfan`
@@ -35,7 +39,9 @@ thing be a static site with no backend — free to host and nothing to keep runn
 
 Moderator and broadcaster status arrive as tags on every chat message, so the `!tomato`
 gate needs no API call. Note the broadcaster is *not* flagged `mod=1`, so both are
-checked; otherwise the streamer couldn't trigger their own overlay.
+checked; otherwise the streamer couldn't trigger their own overlay. Logins in the
+allow-list are matched case-insensitively against the sender's exact login, so a
+lookalike name like `someone2` does not get in.
 
 Everything is drawn in two stacked canvases:
 
@@ -73,6 +79,7 @@ All settings live in the overlay URL — the setup page writes them for you.
 | `wipeMs` | `800` | Screen wipe duration at round end |
 | `debug` | `off` | Status panel plus keyboard tests |
 | `demo` | `off` | Runs a round by itself, to watch the effect without chat |
+| `allow` | *(none)* | Extra logins that may start a round without being a mod, comma-separated |
 
 A mod can also start a longer round with `!tomato 60`.
 

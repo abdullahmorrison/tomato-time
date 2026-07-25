@@ -3,6 +3,11 @@
 
 const CORNERS = ['bottom-right', 'bottom-left', 'top-right', 'top-left'];
 
+// Logins that may start a round on any channel, whatever badges they hold. This is
+// the overlay's author, so it can be triggered on a channel where he isn't a mod.
+// The `allow` URL param adds to this list rather than replacing it.
+const DEFAULT_ALLOW = ['abdullahmorrison'];
+
 const DEFAULTS = {
   channel: '',
   duration: 30,
@@ -13,6 +18,7 @@ const DEFAULTS = {
   wipeMs: 800,
   debug: false,
   demo: false,
+  allow: DEFAULT_ALLOW,
 };
 
 function int(value, fallback, min, max) {
@@ -37,7 +43,14 @@ export function readConfig(search = window.location.search) {
     debug: q.get('debug') === 'on' || q.get('debug') === '1',
     // Runs a round on its own, so the effect can be watched without chat.
     demo: q.get('demo') === 'on' || q.get('demo') === '1',
+    allow: [
+      ...DEFAULT_ALLOW,
+      ...(q.get('allow') || '')
+        .split(',')
+        .map((name) => name.trim().replace(/^@/, '').toLowerCase())
+        .filter(Boolean),
+    ],
   };
 }
 
-export { CORNERS, DEFAULTS };
+export { CORNERS, DEFAULTS, DEFAULT_ALLOW };

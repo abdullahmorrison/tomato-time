@@ -148,9 +148,13 @@ export function hasTrigger(text, word) {
 /**
  * If this message is the start command from someone allowed to use it, return the
  * requested round length in seconds (or null).
+ *
+ * `allow` lists logins that may start a round whatever badges they hold, so the
+ * overlay can be triggered on a channel where they are not a moderator.
  */
-export function parseCommand(message, command, defaultDuration) {
-  if (!message.isMod && !message.isBroadcaster) return null;
+export function parseCommand(message, command, defaultDuration, allow = []) {
+  const named = allow.includes(message.login.toLowerCase());
+  if (!message.isMod && !message.isBroadcaster && !named) return null;
   const parts = message.text.trim().split(/\s+/);
   if (parts[0].toLowerCase() !== command) return null;
   const requested = parseInt(parts[1], 10);

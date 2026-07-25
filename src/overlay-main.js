@@ -63,7 +63,7 @@ if (config.channel) {
       setStatus(`Ready — reading #${config.channel}. Type ${config.command} to start.`);
     }
 
-    const requested = parseCommand(message, config.command, config.duration);
+    const requested = parseCommand(message, config.command, config.duration, config.allow);
     if (requested !== null) {
       show.start(requested);
       return;
