@@ -7,6 +7,9 @@ import { clampDuration } from './config.js';
 
 const ENDPOINT = 'wss://irc-ws.chat.twitch.tv:443';
 const MAX_BACKOFF = 30000;
+// Twitch PINGs roughly every five minutes, so on even the quietest channel something
+// should arrive well inside this. Longer than that means the socket is gone.
+const SILENCE_LIMIT = 360000;
 
 const TAG_UNESCAPE = { '\\s': ' ', '\\:': ';', '\\\\': '\\', '\\r': '\r', '\\n': '\n' };
 
@@ -70,6 +73,7 @@ export class TwitchChat extends EventTarget {
     this.attempts = 0;
     this.closed = false;
     this.retryTimer = null;
+    this.silenceTimer = null;
   }
 
   connect() {
@@ -96,9 +100,11 @@ export class TwitchChat extends EventTarget {
       socket.send(`NICK justinfan${10000 + Math.floor(Math.random() * 89999)}`);
       socket.send(`JOIN #${this.channel}`);
       this.setStatus('connected');
+      this.expectTraffic(socket);
     });
 
     socket.addEventListener('message', (event) => {
+      this.expectTraffic(socket);
       for (const line of event.data.split('\r\n')) {
         if (!line) continue;
         if (line.startsWith('PING')) {
@@ -113,9 +119,25 @@ export class TwitchChat extends EventTarget {
     });
 
     socket.addEventListener('close', () => {
+      clearTimeout(this.silenceTimer);
       if (!this.closed) this.retry();
     });
     socket.addEventListener('error', () => socket.close());
+  }
+
+  /**
+   * Watchdog for a socket that has stopped delivering without closing.
+   *
+   * A half-open connection -- the far side gone, no FIN ever seen -- fires neither
+   * `close` nor `error`, so nothing here would reconnect it. The overlay would keep
+   * reporting "connected" while silently ignoring every command for the rest of the
+   * stream. Closing it ourselves hands it to the existing retry path.
+   */
+  expectTraffic(socket) {
+    clearTimeout(this.silenceTimer);
+    this.silenceTimer = setTimeout(() => {
+      if (this.socket === socket && !this.closed) socket.close();
+    }, SILENCE_LIMIT);
   }
 
   // Twitch resets connections periodically over a long stream. Without this the
@@ -137,6 +159,7 @@ export class TwitchChat extends EventTarget {
   close() {
     this.closed = true;
     clearTimeout(this.retryTimer);
+    clearTimeout(this.silenceTimer);
     if (this.socket) this.socket.close();
   }
 }
