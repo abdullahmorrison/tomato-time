@@ -166,3 +166,16 @@ test('a custom trigger word counts the same way', () => {
   assert.equal(countTriggers('splat splat splat', 'splat'), 3);
   assert.equal(countTriggers('splat splat', 'TomatoTime'), 0);
 });
+
+test('a cap limits how much one message can throw', () => {
+  const spam = Array(9).fill('TomatoTime').join(' ');
+  assert.equal(countTriggers(spam, 'TomatoTime', 5), 5);
+  assert.equal(countTriggers(spam, 'TomatoTime', 1), 1);
+  assert.equal(countTriggers(spam, 'TomatoTime', Infinity), 9);
+});
+
+test('a message under the cap is unaffected by it', () => {
+  assert.equal(countTriggers('TomatoTime TomatoTime', 'TomatoTime', 5), 2);
+  assert.equal(countTriggers('TomatoTime', 'TomatoTime', 5), 1);
+  assert.equal(countTriggers('nothing here', 'TomatoTime', 5), 0);
+});

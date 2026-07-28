@@ -75,11 +75,11 @@ if (config.channel) {
       return;
     }
 
-    // One tomato per trigger in the message, so saying it three times throws three.
+    // One tomato per trigger in the message, so saying it three times throws three,
+    // up to maxPerMessage.
     if (show.active) {
-      for (let n = countTriggers(message.text, config.word); n > 0; n--) {
-        show.throwOne();
-      }
+      let n = countTriggers(message.text, config.word, config.maxPerMessage);
+      for (; n > 0; n--) show.throwOne();
     }
   });
 

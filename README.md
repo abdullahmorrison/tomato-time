@@ -5,8 +5,8 @@ Let Twitch chat throw tomatoes at you, live on stream.
 A mod (or the broadcaster) types `!tomato`. A countdown appears in the corner, and for
 the next 30 seconds anyone who types `TomatoTime` hurls a tomato from the viewer's side
 of the screen at the streamer, where it splatters. Say it more than once in a message and
-you throw one per repeat. A busy chat buries the shot. When the timer runs out, the screen
-wipes clean.
+you throw one per repeat, up to five. A busy chat buries the shot. When the timer runs out,
+the screen wipes clean.
 
 ![Tomatoes splattered across a stream](docs/screenshot.png)
 
@@ -77,7 +77,8 @@ All settings live in the overlay URL — the setup page writes them for you.
 | `channel` | *(required)* | Twitch channel to read |
 | `duration` | `30` | Round length in seconds |
 | `corner` | `bottom-right` | Timer position (`bottom-left`, `top-right`, `top-left`) |
-| `word` | `TomatoTime` | Trigger text, matched case-insensitively as a whole word. One tomato per occurrence |
+| `word` | `TomatoTime` | Trigger text, matched case-insensitively as a whole word |
+| `maxPerMessage` | `5` | Tomatoes one message can throw by repeating the trigger. `0`/`none`/`unlimited` removes the cap |
 | `command` | `!tomato` | Command that starts a round |
 | `cancel` | `!wipe` | Command that ends a round early and clears the screen |
 | `maxInFlight` | *(unlimited)* | Optional cap on concurrent tomatoes. Set a number only if a machine can't keep up |
@@ -130,5 +131,7 @@ IRC works today and has no announced end-of-life; if it were ever withdrawn, onl
 install.
 
 Twitch also rejects a message identical to the sender's previous one, so a chatter cannot
-simply repeat `TomatoTime` line after line. Each occurrence within a single message counts,
-which is what lets one person keep throwing without having to vary anything.
+simply repeat `TomatoTime` line after line. Each occurrence within a single message counts
+instead, up to `maxPerMessage`, which is what lets one person keep throwing without having
+to vary anything — while stopping a single pasted wall of emotes from burying the screen on
+its own.

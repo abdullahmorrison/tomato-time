@@ -18,6 +18,9 @@ const DEFAULTS = {
   duration: 30,
   corner: 'bottom-right',
   word: 'TomatoTime',
+  // Repeats within one message each throw, up to this many, so one chatter can keep
+  // firing without a single message emptying the screen at them.
+  maxPerMessage: 5,
   command: '!tomato',
   cancel: '!wipe',
   // No ceiling: if chat floods, all of it lands on screen.
@@ -29,14 +32,14 @@ const DEFAULTS = {
 };
 
 /**
- * Concurrent tomato cap. Unlimited unless a number is given, so it exists only as an
- * escape hatch for a machine that cannot keep up.
+ * A tomato cap, falling back to `fallback` when nothing usable is given. 0, "none",
+ * "off" and "unlimited" all explicitly remove the cap, whatever the fallback is.
  */
-function parseCap(value) {
-  if (value === null || value === '') return Infinity;
+function parseCap(value, fallback = Infinity) {
+  if (value === null || value === '') return fallback;
   if (/^(0|none|off|unlimited)$/i.test(value.trim())) return Infinity;
   const n = parseInt(value, 10);
-  if (!Number.isFinite(n) || n <= 0) return Infinity;
+  if (!Number.isFinite(n) || n <= 0) return fallback;
   return Math.max(1, n);
 }
 
@@ -61,6 +64,7 @@ export function readConfig(search = window.location.search) {
     duration: clampDuration(q.get('duration')),
     corner: CORNERS.includes(corner) ? corner : DEFAULTS.corner,
     word: (q.get('word') || DEFAULTS.word).trim(),
+    maxPerMessage: parseCap(q.get('maxPerMessage'), DEFAULTS.maxPerMessage),
     command: (q.get('command') || DEFAULTS.command).trim().toLowerCase(),
     cancel: (q.get('cancel') || DEFAULTS.cancel).trim().toLowerCase(),
     maxInFlight: parseCap(q.get('maxInFlight')),

@@ -68,6 +68,25 @@ test('commands are lowercased, matching how chat text is compared', () => {
   assert.equal(c.cancel, '!cleanup');
 });
 
+test('maxPerMessage defaults to 5 and takes a number', () => {
+  assert.equal(readConfig('').maxPerMessage, 5);
+  assert.equal(readConfig('?maxPerMessage=12').maxPerMessage, 12);
+  assert.equal(readConfig('?maxPerMessage=1').maxPerMessage, 1);
+});
+
+// Same words as maxInFlight, so the two caps behave alike where they overlap.
+test('maxPerMessage can be removed explicitly, unlike being left unset', () => {
+  for (const v of ['0', 'none', 'off', 'unlimited', 'UNLIMITED']) {
+    assert.equal(readConfig(`?maxPerMessage=${v}`).maxPerMessage, Infinity, v);
+  }
+});
+
+test('an unusable maxPerMessage falls back to the default, not to unlimited', () => {
+  for (const v of ['', 'abc', '-5']) {
+    assert.equal(readConfig(`?maxPerMessage=${v}`).maxPerMessage, 5, v);
+  }
+});
+
 test('maxInFlight is unlimited unless a positive number is given', () => {
   assert.equal(readConfig('?maxInFlight=250').maxInFlight, 250);
   for (const v of ['', '0', 'none', 'off', 'unlimited', 'OFF', '-5', 'abc']) {
