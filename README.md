@@ -95,9 +95,12 @@ the splatter rather than vanishing mid-flight. Same permissions as starting a ro
 
 ```
 node serve.js       # http://localhost:4747
+npm test            # command parsing, config, round state, reconnect
 ```
 
-No dependencies and no build step — the files in this repo are the deployed site.
+No dependencies and no build step — the files in this repo are the deployed site. The
+tests cover the pure logic and the round state machine; the visual layer is checked
+with `debug=on` below.
 
 With `debug=on`, the overlay shows live state and binds keys so the whole visual path
 can be exercised with no chat and no mod:
