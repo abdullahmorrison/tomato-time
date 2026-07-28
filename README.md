@@ -26,6 +26,13 @@ Get your link from the setup page, or use it directly:
 https://abdullahmorrison.github.io/tomatod/overlay.html?channel=YOUR_CHANNEL
 ```
 
+Setting up someone else? The setup page takes the same `channel` param, so you can send
+a streamer a link with their channel already filled in and let them pick the rest:
+
+```
+https://abdullahmorrison.github.io/tomatod/?channel=THEIR_CHANNEL
+```
+
 Only mods and the broadcaster can start a round — regular chatters can't.
 
 `abdullahmorrison` can also start one on any channel without holding a badge (it's in

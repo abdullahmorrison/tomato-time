@@ -134,5 +134,11 @@ for (const el of [channelEl, durationEl, cornerEl]) {
 }
 channelEl.addEventListener('change', checkChannel);
 
+// This page takes the same `channel` param as the overlay, so it can be handed to a
+// streamer with their name already in the box -- setup for someone else's channel is
+// otherwise a spelling test they have to pass before anything works.
+const named = normalizeChannel(new URLSearchParams(window.location.search).get('channel'));
+if (named) channelEl.value = named;
+
 refreshLink();
 checkChannel();
