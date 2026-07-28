@@ -3,6 +3,11 @@
 
 const CORNERS = ['bottom-right', 'bottom-left', 'top-right', 'top-left'];
 
+// Round length bounds. A duration can arrive from the URL, from chat as `!tomato 60`,
+// or from the setup page, and all three must agree on what is in range.
+const MIN_DURATION = 5;
+const MAX_DURATION = 600;
+
 // Logins that may start a round on any channel, whatever badges they hold. This is
 // the overlay's author, so he can trigger it on a channel where he holds no mod
 // badge. The `allow` URL param adds to this list rather than replacing it.
@@ -41,6 +46,11 @@ function int(value, fallback, min, max) {
   return Math.min(max, Math.max(min, n));
 }
 
+/** A round length from any source, clamped to the one range they all share. */
+export function clampDuration(value, fallback = DEFAULTS.duration) {
+  return int(value, fallback, MIN_DURATION, MAX_DURATION);
+}
+
 export function readConfig(search = window.location.search) {
   const q = new URLSearchParams(search);
   const corner = (q.get('corner') || '').toLowerCase();
@@ -48,7 +58,7 @@ export function readConfig(search = window.location.search) {
   return {
     ...DEFAULTS,
     channel: (q.get('channel') || '').trim().replace(/^#/, '').toLowerCase(),
-    duration: int(q.get('duration'), DEFAULTS.duration, 5, 600),
+    duration: clampDuration(q.get('duration')),
     corner: CORNERS.includes(corner) ? corner : DEFAULTS.corner,
     word: (q.get('word') || DEFAULTS.word).trim(),
     command: (q.get('command') || DEFAULTS.command).trim().toLowerCase(),
@@ -68,4 +78,4 @@ export function readConfig(search = window.location.search) {
   };
 }
 
-export { CORNERS, DEFAULTS, DEFAULT_ALLOW };
+export { CORNERS, DEFAULTS, DEFAULT_ALLOW, MIN_DURATION, MAX_DURATION };

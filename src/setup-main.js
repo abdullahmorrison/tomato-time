@@ -1,7 +1,7 @@
 // The setup page: turns a channel name into a Browser Source URL, and shows a live
 // preview of the effect so nobody has to go live to find out what it looks like.
 
-import { DEFAULTS } from './config.js';
+import { DEFAULTS, clampDuration } from './config.js';
 import { TwitchChat } from './twitch-chat.js';
 import { TomatoShow } from './round.js';
 import { tomatoSprite } from './sprite.js';
@@ -22,7 +22,7 @@ for (const id of ['logo', 'pIcon']) {
 
 function buildLink() {
   const channel = channelEl.value.trim().replace(/^#/, '').toLowerCase();
-  const duration = Math.min(600, Math.max(5, parseInt(durationEl.value, 10) || 30));
+  const duration = clampDuration(durationEl.value);
   const corner = cornerEl.value;
 
   // Resolve against this page so the link works on GitHub Pages and locally alike.
@@ -69,7 +69,7 @@ function hideHint() {
 
 $('demoRound').addEventListener('click', () => {
   hideHint();
-  preview.start(Math.min(600, Math.max(5, parseInt(durationEl.value, 10) || 30)));
+  preview.start(clampDuration(durationEl.value));
 });
 
 $('demoFew').addEventListener('click', () => {

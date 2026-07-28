@@ -3,6 +3,8 @@
 // Anonymous access: a "justinfan" nickname needs no password, no OAuth and no bot
 // account, which is what lets this whole overlay be a static page with no backend.
 
+import { clampDuration } from './config.js';
+
 const ENDPOINT = 'wss://irc-ws.chat.twitch.tv:443';
 const MAX_BACKOFF = 30000;
 
@@ -160,11 +162,8 @@ export function parseCommand(message, command, defaultDuration, allow = []) {
   // start with an unparseable duration, i.e. the exact opposite of what was asked.
   if (STOP_WORDS.includes(parts[1])) return null;
 
-  const requested = parseInt(parts[1], 10);
-  if (Number.isFinite(requested)) {
-    return Math.min(600, Math.max(5, requested));
-  }
-  return defaultDuration;
+  // Same clamp as the URL param, so `!tomato 900` and ?duration=900 cannot disagree.
+  return clampDuration(parts[1], defaultDuration);
 }
 
 const STOP_WORDS = ['stop', 'cancel', 'end', 'wipe', 'clear'];

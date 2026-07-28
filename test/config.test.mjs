@@ -1,6 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readConfig, DEFAULTS, DEFAULT_ALLOW, CORNERS } from '../src/config.js';
+import {
+  readConfig, clampDuration, DEFAULTS, DEFAULT_ALLOW, CORNERS, MIN_DURATION, MAX_DURATION,
+} from '../src/config.js';
+import { parseCommand } from '../src/twitch-chat.js';
 
 test('an empty URL yields the documented defaults', () => {
   const c = readConfig('');
@@ -19,8 +22,31 @@ test('channel is normalised: leading #, case and stray spaces', () => {
   assert.equal(readConfig('?channel=%23SomeOne%20').channel, 'someone');
 });
 
-// parseCommand clamps a chat-supplied duration to the same range; if these two ever
-// disagree, `!tomato 900` and ?duration=900 start behaving differently.
+test('clampDuration holds any source to one range', () => {
+  assert.equal(clampDuration('60'), 60);
+  assert.equal(clampDuration(60), 60);
+  assert.equal(clampDuration('1'), MIN_DURATION);
+  assert.equal(clampDuration('99999'), MAX_DURATION);
+  assert.equal(clampDuration('abc'), DEFAULTS.duration);
+  assert.equal(clampDuration('', 45), 45, 'the fallback is used, not the default');
+  assert.equal(clampDuration(null, 45), 45);
+});
+
+// The URL param and the chat command are separate entry points into the same setting.
+// They shared a hand-copied clamp until this was pulled into one helper; pin that they
+// still agree, so `!tomato 900` and ?duration=900 can never mean different things.
+test('a duration means the same thing from the URL as from chat', () => {
+  const fromChat = (text) =>
+    parseCommand({ login: 'm', text, isMod: true, isBroadcaster: false }, '!tomato', 30);
+  for (const value of ['5', '30', '60', '600', '1', '0', '99999']) {
+    assert.equal(
+      readConfig(`?duration=${value}`).duration,
+      fromChat(`!tomato ${value}`),
+      `duration=${value}`,
+    );
+  }
+});
+
 test('duration is clamped to 5-600', () => {
   assert.equal(readConfig('?duration=60').duration, 60);
   assert.equal(readConfig('?duration=1').duration, 5);
