@@ -47,7 +47,19 @@ export class Renderer {
     this.last = now;
 
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    const keepGoing = this.onFrame(dt, this.ctx);
+
+    let keepGoing = false;
+    try {
+      keepGoing = this.onFrame(dt, this.ctx);
+    } catch (err) {
+      // One bad frame must not cost the rest of the stream. Without this the chain is
+      // never rescheduled *and* `running` stays true, so every later start() returns
+      // early and nothing can ever draw again -- only reloading the source recovers.
+      // Stopping properly leaves the loop restartable by the next round.
+      console.error('[tomatod] frame failed, stopping the loop', err);
+      this.stop();
+      return;
+    }
 
     if (keepGoing) {
       requestAnimationFrame(this.tick);
