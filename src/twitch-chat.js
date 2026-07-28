@@ -164,10 +164,21 @@ export class TwitchChat extends EventTarget {
   }
 }
 
-/** True when the message contains the trigger as a whole word. */
-export function hasTrigger(text, word) {
+/**
+ * How many tomatoes this message throws: one per whole-word occurrence of the
+ * trigger.
+ *
+ * Counting rather than testing matters because Twitch rejects a message identical to
+ * the sender's last one, so repeating the trigger inside a single message is the only
+ * way one chatter can keep throwing during a round.
+ */
+export function countTriggers(text, word) {
   const target = word.toLowerCase();
-  return text.split(/\s+/).some((token) => token.toLowerCase() === target);
+  let count = 0;
+  for (const token of text.split(/\s+/)) {
+    if (token.toLowerCase() === target) count++;
+  }
+  return count;
 }
 
 /**

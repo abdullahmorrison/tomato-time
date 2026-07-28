@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  parseMessage, parseCommand, isCancel, canControl, hasTrigger,
+  parseMessage, parseCommand, isCancel, canControl, countTriggers,
 } from '../src/twitch-chat.js';
 
 const mod = (text) => ({ login: 'somemod', text, isMod: true, isBroadcaster: false });
@@ -132,11 +132,37 @@ test('!tomato stop cancels and never starts', () => {
 
 // --- the throw trigger ------------------------------------------------------
 
-test('the trigger word matches only as a whole word', () => {
-  assert.equal(hasTrigger('TomatoTime', 'TomatoTime'), true);
-  assert.equal(hasTrigger('go TomatoTime go', 'TomatoTime'), true);
-  assert.equal(hasTrigger('tomatotime', 'TomatoTime'), true);
-  assert.equal(hasTrigger('xTomatoTime', 'TomatoTime'), false);
-  assert.equal(hasTrigger('TomatoTimes', 'TomatoTime'), false);
-  assert.equal(hasTrigger('', 'TomatoTime'), false);
+test('the trigger word counts only as a whole word', () => {
+  assert.equal(countTriggers('TomatoTime', 'TomatoTime'), 1);
+  assert.equal(countTriggers('go TomatoTime go', 'TomatoTime'), 1);
+  assert.equal(countTriggers('tomatotime', 'TomatoTime'), 1);
+  assert.equal(countTriggers('xTomatoTime', 'TomatoTime'), 0);
+  assert.equal(countTriggers('TomatoTimes', 'TomatoTime'), 0);
+  assert.equal(countTriggers('', 'TomatoTime'), 0);
+});
+
+// Twitch rejects a message identical to the sender's previous one, so repeating the
+// trigger in one message is the only way a single chatter can keep throwing.
+test('each repeat of the trigger in one message throws another tomato', () => {
+  assert.equal(countTriggers('TomatoTime TomatoTime', 'TomatoTime'), 2);
+  assert.equal(countTriggers('TomatoTime TomatoTime TomatoTime', 'TomatoTime'), 3);
+  assert.equal(countTriggers('TomatoTime lol TomatoTime', 'TomatoTime'), 2);
+});
+
+test('repeats are counted case-insensitively, like a single one', () => {
+  assert.equal(countTriggers('tomatotime TOMATOTIME TomatoTime', 'TomatoTime'), 3);
+});
+
+test('odd spacing between repeats does not lose throws', () => {
+  assert.equal(countTriggers('  TomatoTime   TomatoTime  ', 'TomatoTime'), 2);
+  assert.equal(countTriggers('TomatoTime\nTomatoTime\tTomatoTime', 'TomatoTime'), 3);
+});
+
+test('near-misses beside a real one do not add throws', () => {
+  assert.equal(countTriggers('TomatoTime TomatoTimes xTomatoTime', 'TomatoTime'), 1);
+});
+
+test('a custom trigger word counts the same way', () => {
+  assert.equal(countTriggers('splat splat splat', 'splat'), 3);
+  assert.equal(countTriggers('splat splat', 'TomatoTime'), 0);
 });

@@ -1,5 +1,5 @@
 import { readConfig } from './config.js';
-import { TwitchChat, hasTrigger, parseCommand, isCancel } from './twitch-chat.js';
+import { TwitchChat, countTriggers, parseCommand, isCancel } from './twitch-chat.js';
 import { TomatoShow } from './round.js';
 import { tomatoSprite } from './sprite.js';
 
@@ -75,8 +75,11 @@ if (config.channel) {
       return;
     }
 
-    if (show.active && hasTrigger(message.text, config.word)) {
-      show.throwOne();
+    // One tomato per trigger in the message, so saying it three times throws three.
+    if (show.active) {
+      for (let n = countTriggers(message.text, config.word); n > 0; n--) {
+        show.throwOne();
+      }
     }
   });
 
