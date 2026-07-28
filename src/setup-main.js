@@ -1,7 +1,7 @@
 // The setup page: turns a channel name into a Browser Source URL, and shows a live
 // preview of the effect so nobody has to go live to find out what it looks like.
 
-import { DEFAULTS, clampDuration } from './config.js';
+import { DEFAULTS, clampDuration, normalizeChannel } from './config.js';
 import { TwitchChat } from './twitch-chat.js';
 import { TomatoShow } from './round.js';
 import { tomatoSprite } from './sprite.js';
@@ -21,7 +21,7 @@ for (const id of ['logo', 'pIcon']) {
 // --- link building --------------------------------------------------------
 
 function buildLink() {
-  const channel = channelEl.value.trim().replace(/^#/, '').toLowerCase();
+  const channel = normalizeChannel(channelEl.value);
   const duration = clampDuration(durationEl.value);
   const corner = cornerEl.value;
 
@@ -96,7 +96,7 @@ function checkChannel() {
     chat.close();
     chat = null;
   }
-  const channel = channelEl.value.trim().replace(/^#/, '').toLowerCase();
+  const channel = normalizeChannel(channelEl.value);
   statusEl.className = 'status';
 
   if (!channel) {

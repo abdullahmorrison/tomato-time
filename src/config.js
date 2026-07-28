@@ -49,6 +49,15 @@ function int(value, fallback, min, max) {
   return Math.min(max, Math.max(min, n));
 }
 
+/**
+ * A channel name as Twitch wants it: no leading #, lowercase, no stray spaces. Typed
+ * into the setup page, pasted into a URL or read back out of one, it must come out the
+ * same either way or a link will quietly point at a channel that does not exist.
+ */
+export function normalizeChannel(value) {
+  return (value || '').trim().replace(/^#/, '').toLowerCase();
+}
+
 /** A round length from any source, clamped to the one range they all share. */
 export function clampDuration(value, fallback = DEFAULTS.duration) {
   return int(value, fallback, MIN_DURATION, MAX_DURATION);
@@ -60,7 +69,7 @@ export function readConfig(search = window.location.search) {
 
   return {
     ...DEFAULTS,
-    channel: (q.get('channel') || '').trim().replace(/^#/, '').toLowerCase(),
+    channel: normalizeChannel(q.get('channel')),
     duration: clampDuration(q.get('duration')),
     corner: CORNERS.includes(corner) ? corner : DEFAULTS.corner,
     word: (q.get('word') || DEFAULTS.word).trim(),

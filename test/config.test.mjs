@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  readConfig, clampDuration, DEFAULTS, DEFAULT_ALLOW, CORNERS, MIN_DURATION, MAX_DURATION,
+  readConfig, clampDuration, normalizeChannel,
+  DEFAULTS, DEFAULT_ALLOW, CORNERS, MIN_DURATION, MAX_DURATION,
 } from '../src/config.js';
 import { parseCommand } from '../src/twitch-chat.js';
 
@@ -20,6 +21,25 @@ test('an empty URL yields the documented defaults', () => {
 
 test('channel is normalised: leading #, case and stray spaces', () => {
   assert.equal(readConfig('?channel=%23SomeOne%20').channel, 'someone');
+});
+
+// The setup page normalises what is typed, what it writes into a link, and what it
+// reads back out of one. All three must agree or a shared link points nowhere.
+test('normalizeChannel is stable and handles nothing at all', () => {
+  assert.equal(normalizeChannel('#SomeOne '), 'someone');
+  assert.equal(normalizeChannel(' someone'), 'someone');
+  assert.equal(normalizeChannel('someone'), 'someone');
+  assert.equal(normalizeChannel(normalizeChannel('#SomeOne ')), 'someone');
+  assert.equal(normalizeChannel(''), '');
+  assert.equal(normalizeChannel(null), '');
+  assert.equal(normalizeChannel(undefined), '');
+});
+
+test('a channel survives a round trip through a link', () => {
+  const typed = '#TenzinNiznet ';
+  const link = new URL('https://example.test/overlay.html');
+  link.searchParams.set('channel', normalizeChannel(typed));
+  assert.equal(readConfig(link.search).channel, 'tenzinniznet');
 });
 
 test('clampDuration holds any source to one range', () => {
