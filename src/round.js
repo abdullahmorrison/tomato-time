@@ -50,6 +50,11 @@ export class TomatoShow {
   }
 
   start(durationSec) {
+    // Only the frame loop advances a round out of `active` or `landing`, so if the
+    // loop is not running the state is stale -- a frame that failed, or a source that
+    // was suspended mid-round. Left alone it would refuse every future round, so a
+    // start command doubles as the way back out.
+    if (this.state !== 'idle' && !this.renderer.running) this.reset();
     if (this.state !== 'idle') return false;
     // Pick up the real size now: a preview box may not have been laid out yet when
     // the show was constructed.
@@ -122,6 +127,19 @@ export class TomatoShow {
     this.timer.hide();
     this.beginWipe();
     return true;
+  }
+
+  /** Drop everything and return to idle immediately, with no wipe animation. */
+  reset() {
+    clearTimeout(this.wipeTimer);
+    this.pool.clear();
+    this.splatter.clear();
+    this.timer.hide();
+    for (const layer of this.layers) {
+      layer.style.transition = '';
+      layer.style.opacity = '1';
+    }
+    this.state = 'idle';
   }
 
   beginWipe() {
