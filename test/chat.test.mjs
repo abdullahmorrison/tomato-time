@@ -120,9 +120,23 @@ test('an extension with no readable number falls back to the default', () => {
   assert.equal(parseExtend(mod('!tomato more please'), '!tomato', 30), 30);
 });
 
-test('an extension is clamped to the same 5-600 range as every other duration', () => {
-  assert.equal(parseExtend(mod('!tomato +1'), '!tomato', 30), 5);
+test('an extension is bounded above like every other duration', () => {
   assert.equal(parseExtend(mod('!tomato +99999'), '!tomato', 30), 600);
+});
+
+// An extension is a delta, not a round length, so it does NOT get the MIN_DURATION
+// floor. It did at first, and `!tomato +2` silently added five seconds instead of two
+// -- the command appeared to work, just not by the amount that was asked for.
+test('a small extension adds what was asked, not a five-second minimum', () => {
+  assert.equal(parseExtend(mod('!tomato +1'), '!tomato', 30), 1);
+  assert.equal(parseExtend(mod('!tomato +2'), '!tomato', 30), 2);
+  assert.equal(parseExtend(mod('!tomato +4'), '!tomato', 30), 4);
+  assert.equal(parseExtend(mod('!tomato add 3'), '!tomato', 30), 3);
+});
+
+// A round length still has the floor: the two clamps must not drift back together.
+test('a round length keeps its five-second floor', () => {
+  assert.equal(parseCommand(mod('!tomato 2'), '!tomato', 30), 5);
 });
 
 test('a plain start command is not an extension', () => {

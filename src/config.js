@@ -63,6 +63,17 @@ export function clampDuration(value, fallback = DEFAULTS.duration) {
   return int(value, fallback, MIN_DURATION, MAX_DURATION);
 }
 
+/**
+ * How many seconds an extension adds. Deliberately NOT clampDuration: that floor of
+ * MIN_DURATION is there so nobody starts a round too short to be worth watching, but an
+ * extension is a delta, not a round length. Nudging a round out by two seconds to land
+ * it on something is a real request, and the shared floor silently turned it into five.
+ * The ceiling still holds, and round.extend caps the total that is left besides.
+ */
+export function clampExtension(value, fallback = DEFAULTS.duration) {
+  return int(value, fallback, 1, MAX_DURATION);
+}
+
 export function readConfig(search = window.location.search) {
   const q = new URLSearchParams(search);
   const corner = (q.get('corner') || '').toLowerCase();

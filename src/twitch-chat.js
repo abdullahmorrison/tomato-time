@@ -3,7 +3,7 @@
 // Anonymous access: a "justinfan" nickname needs no password, no OAuth and no bot
 // account, which is what lets this whole overlay be a static page with no backend.
 
-import { clampDuration } from './config.js';
+import { clampDuration, clampExtension } from './config.js';
 
 const ENDPOINT = 'wss://irc-ws.chat.twitch.tv:443';
 const MAX_BACKOFF = 30000;
@@ -218,9 +218,9 @@ export function parseExtend(message, command, defaultDuration, allow = []) {
   if (parts[0] !== command) return null;
   const arg = extendArg(parts);
   if (arg === null) return null;
-  // Clamped like every other duration, so `!tomato +99999` is bounded the same way
-  // `!tomato 99999` is.
-  return clampDuration(arg, defaultDuration);
+  // Bounded above like every other duration, but with no five-second floor: see
+  // clampExtension.
+  return clampExtension(arg, defaultDuration);
 }
 
 /**
