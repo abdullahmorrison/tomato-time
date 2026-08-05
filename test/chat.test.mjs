@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  parseMessage, parseCommand, isCancel, canControl, countTriggers,
+  parseMessage, parseCommand, parseExtend, isCancel, canControl, countTriggers,
 } from '../src/twitch-chat.js';
 
 const mod = (text) => ({ login: 'somemod', text, isMod: true, isBroadcaster: false });
@@ -98,6 +98,59 @@ test('the command must be the first word, not merely present', () => {
 test('a custom command from the URL is honoured', () => {
   assert.equal(parseCommand(mod('!splat 45'), '!splat', 30), 45);
   assert.equal(parseCommand(mod('!tomato 45'), '!splat', 30), null);
+});
+
+// --- extending a round ------------------------------------------------------
+
+test('a plus sign adds that many seconds', () => {
+  assert.equal(parseExtend(mod('!tomato +30'), '!tomato', 30), 30);
+  assert.equal(parseExtend(mod('!tomato +60'), '!tomato', 30), 60);
+});
+
+test('the word forms extend too, with or without a number', () => {
+  for (const word of ['more', 'extend', 'add', 'longer']) {
+    assert.equal(parseExtend(mod(`!tomato ${word}`), '!tomato', 30), 30, word);
+    assert.equal(parseExtend(mod(`!tomato ${word} 45`), '!tomato', 30), 45, word);
+  }
+});
+
+test('an extension with no readable number falls back to the default', () => {
+  assert.equal(parseExtend(mod('!tomato +'), '!tomato', 30), 30);
+  assert.equal(parseExtend(mod('!tomato +soon'), '!tomato', 30), 30);
+  assert.equal(parseExtend(mod('!tomato more please'), '!tomato', 30), 30);
+});
+
+test('an extension is clamped to the same 5-600 range as every other duration', () => {
+  assert.equal(parseExtend(mod('!tomato +1'), '!tomato', 30), 5);
+  assert.equal(parseExtend(mod('!tomato +99999'), '!tomato', 30), 600);
+});
+
+test('a plain start command is not an extension', () => {
+  assert.equal(parseExtend(mod('!tomato'), '!tomato', 30), null);
+  assert.equal(parseExtend(mod('!tomato 60'), '!tomato', 30), null);
+  assert.equal(parseExtend(mod('!tomato stop'), '!tomato', 30), null);
+});
+
+test('non-mods cannot extend a round', () => {
+  assert.equal(parseExtend(viewer('!tomato +30'), '!tomato', 30), null);
+  assert.equal(parseExtend(viewer('!tomato +30'), '!tomato', 30, ['someviewer']), 30);
+});
+
+// The `!tomato stop` bug in another costume: parseInt reads "+30" as 30, so without
+// an explicit guard an extend would silently start a fresh round instead of adding to
+// the one running -- wiping the screen rather than keeping it. Pin both halves, and
+// the overlay's ordering (extend checked first) with them.
+test('!tomato +30 extends and never starts', () => {
+  const msg = mod('!tomato +30');
+  assert.equal(parseExtend(msg, '!tomato', 30), 30);
+  assert.equal(parseCommand(msg, '!tomato', 30), null);
+});
+
+test('the word forms never start a round either', () => {
+  for (const word of ['more', 'extend', 'add', 'longer']) {
+    assert.equal(parseCommand(mod(`!tomato ${word}`), '!tomato', 30), null, word);
+    assert.equal(parseCommand(mod(`!tomato ${word} 45`), '!tomato', 30), null, word);
+  }
 });
 
 // --- ending a round ---------------------------------------------------------

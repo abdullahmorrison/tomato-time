@@ -1,5 +1,5 @@
 import { readConfig } from './config.js';
-import { TwitchChat, countTriggers, parseCommand, isCancel } from './twitch-chat.js';
+import { TwitchChat, countTriggers, parseCommand, parseExtend, isCancel } from './twitch-chat.js';
 import { TomatoShow } from './round.js';
 import { tomatoSprite } from './sprite.js';
 
@@ -69,6 +69,14 @@ if (config.channel) {
       return;
     }
 
+    // Also checked before the start command: `!tomato +30` reads as a perfectly good
+    // request to start a 30-second round if it gets that far.
+    const extra = parseExtend(message, config.command, config.duration, config.allow);
+    if (extra !== null) {
+      show.extend(extra);
+      return;
+    }
+
     const requested = parseCommand(message, config.command, config.duration, config.allow);
     if (requested !== null) {
       show.start(requested);
@@ -111,7 +119,7 @@ if (config.debug) {
     panel.textContent =
       `state: ${show.state} · in flight: ${show.pool.liveCount}/${cap}` +
       ` · pooled: ${show.pool.created} · chat msgs: ${messagesSeen}` +
-      ' · [R] round  [T] throw  [Y] throw 50  [C] cancel';
+      ' · [R] round  [E] +15s  [T] throw  [Y] throw 50  [C] cancel';
   };
   refresh();
   setInterval(refresh, 200);
@@ -119,6 +127,7 @@ if (config.debug) {
   window.addEventListener('keydown', (e) => {
     const key = e.key.toLowerCase();
     if (key === 'r') show.start(config.duration);
+    if (key === 'e') show.extend(15);
     if (key === 't') show.throwOne();
     if (key === 'y') for (let i = 0; i < 50; i++) show.throwOne();
     if (key === 'c') show.cancel();

@@ -5,6 +5,7 @@
 // `landing` exists so that tomatoes already in the air when the timer expires are
 // allowed to arrive instead of vanishing mid-flight.
 
+import { MAX_DURATION } from './config.js';
 import { TomatoPool } from './tomato.js';
 import { SplatterField } from './splatter.js';
 import { Renderer } from './renderer.js';
@@ -68,6 +69,25 @@ export class TomatoShow {
     this.endsAt = performance.now() + durationSec * 1000;
     this.timer.show();
     this.timer.update(durationSec);
+    this.renderer.start();
+    return true;
+  }
+
+  /**
+   * Give the round in progress more time. Only meaningful while the timer is still
+   * counting: once it has expired the round is landing what is already in the air,
+   * and reopening it there would drop tomatoes onto a screen that is about to wipe.
+   */
+  extend(seconds) {
+    if (this.state !== 'active') return false;
+    const now = performance.now();
+    // Cap what is left rather than what is added, so repeated extends cannot walk a
+    // round past the range every other way of setting a duration is held to.
+    const left = Math.min((this.endsAt - now) / 1000 + seconds, MAX_DURATION);
+    this.endsAt = now + left * 1000;
+    this.timer.update(left);
+    // Normally already running. Restarting it also means an extend recovers a round
+    // whose loop has stalled, the same way a fresh start does.
     this.renderer.start();
     return true;
   }

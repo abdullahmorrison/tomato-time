@@ -196,12 +196,51 @@ export function parseCommand(message, command, defaultDuration, allow = []) {
   // `!tomato stop` ends a round. Without this it would fall through and read as a
   // start with an unparseable duration, i.e. the exact opposite of what was asked.
   if (STOP_WORDS.includes(parts[1])) return null;
+  // Same trap for `!tomato +30`: parseInt reads "+30" happily, so without this an
+  // extend would start a fresh 30-second round the moment one was not already running.
+  if (extendArg(parts) !== null) return null;
 
   // Same clamp as the URL param, so `!tomato 900` and ?duration=900 cannot disagree.
   return clampDuration(parts[1], defaultDuration);
 }
 
+/**
+ * If this message asks for the round in progress to run longer, return how many extra
+ * seconds it should get (or null).
+ *
+ * Accepts `!tomato +30`, a bare `!tomato more`, and `!tomato extend 15`. A round is
+ * routinely worth more time than it was given, and the alternative -- wiping and
+ * starting again -- clears the screen, which is the opposite of what is wanted.
+ */
+export function parseExtend(message, command, defaultDuration, allow = []) {
+  if (!canControl(message, allow)) return null;
+  const parts = words(message.text);
+  if (parts[0] !== command) return null;
+  const arg = extendArg(parts);
+  if (arg === null) return null;
+  // Clamped like every other duration, so `!tomato +99999` is bounded the same way
+  // `!tomato 99999` is.
+  return clampDuration(arg, defaultDuration);
+}
+
+/**
+ * The seconds argument of an extend request, or null if this is not one. `+30` carries
+ * its own number; a word form takes the next word, and either yields '' when the number
+ * is missing so the caller falls back to the default.
+ *
+ * Absent has to read as '' and not as null: a bare `!tomato more` is a real extend
+ * request, and sharing one sentinel with "not an extend request" would send it on to be
+ * read as a start -- wiping the screen instead of adding to what is on it.
+ */
+function extendArg(parts) {
+  const arg = parts[1] || '';
+  if (arg.startsWith('+')) return arg.slice(1);
+  if (EXTEND_WORDS.includes(arg)) return parts[2] || '';
+  return null;
+}
+
 const STOP_WORDS = ['stop', 'cancel', 'end', 'wipe', 'clear'];
+const EXTEND_WORDS = ['more', 'extend', 'add', 'longer'];
 
 function words(text) {
   return text.trim().toLowerCase().split(/\s+/);
