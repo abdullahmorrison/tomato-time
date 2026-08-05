@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  parseMessage, parseCommand, parseExtend, isCancel, canControl, countTriggers,
+  parseMessage, parseControl, canControl, countTriggers,
 } from '../src/twitch-chat.js';
 
 const mod = (text) => ({ login: 'somemod', text, isMod: true, isBroadcaster: false });
@@ -40,161 +40,141 @@ test('parseMessage keeps colons inside the message text', () => {
   assert.equal(parseMessage(line).text, 'see: https://example.com');
 });
 
+// --- reading a command ------------------------------------------------------
+//
+// parseControl decides what a message asks for in one pass, so each case here pins the
+// kind and the seconds together. Splitting that across a predicate per command is what
+// let `!tomato stop` and `!tomato +30` both read as starts.
+
+const CONF = { command: '!tomato', cancel: '!wipe', duration: 30, allow: [] };
+const control = (text, extra = {}) => parseControl(mod(text), { ...CONF, ...extra });
+
 // --- starting a round -------------------------------------------------------
 
 test('bare command uses the configured default duration', () => {
-  assert.equal(parseCommand(mod('!tomato'), '!tomato', 30), 30);
+  assert.deepEqual(control('!tomato'), { kind: 'start', seconds: 30 });
 });
 
 test('an explicit duration is used instead of the default', () => {
-  assert.equal(parseCommand(mod('!tomato 60'), '!tomato', 30), 60);
+  assert.deepEqual(control('!tomato 60'), { kind: 'start', seconds: 60 });
 });
 
 test('an explicit duration is clamped to the same 5-600 range as the URL param', () => {
-  assert.equal(parseCommand(mod('!tomato 1'), '!tomato', 30), 5);
-  assert.equal(parseCommand(mod('!tomato 0'), '!tomato', 30), 5);
-  assert.equal(parseCommand(mod('!tomato -20'), '!tomato', 30), 5);
-  assert.equal(parseCommand(mod('!tomato 99999'), '!tomato', 30), 600);
-});
-
-test('an unparseable duration falls back to the default rather than NaN', () => {
-  assert.equal(parseCommand(mod('!tomato soon'), '!tomato', 30), 30);
-  assert.equal(parseCommand(mod('!tomato !!'), '!tomato', 30), 30);
-});
-
-test('trailing junk after the number is tolerated', () => {
-  assert.equal(parseCommand(mod('!tomato 60s'), '!tomato', 30), 60);
-  assert.equal(parseCommand(mod('!tomato 60 please'), '!tomato', 30), 60);
-});
-
-test('extra whitespace and casing do not matter', () => {
-  assert.equal(parseCommand(mod('  !TOMATO   60  '), '!tomato', 30), 60);
-});
-
-test('a stop word is never read as a duration', () => {
-  for (const word of ['stop', 'cancel', 'end', 'wipe', 'clear']) {
-    assert.equal(parseCommand(mod(`!tomato ${word}`), '!tomato', 30), null, word);
+  for (const [text, seconds] of [['1', 5], ['0', 5], ['-20', 5], ['99999', 600]]) {
+    assert.deepEqual(control(`!tomato ${text}`), { kind: 'start', seconds }, text);
   }
 });
 
-test('non-mods cannot start a round, with or without a duration', () => {
-  assert.equal(parseCommand(viewer('!tomato'), '!tomato', 30), null);
-  assert.equal(parseCommand(viewer('!tomato 60'), '!tomato', 30), null);
+test('an unparseable duration falls back to the default rather than NaN', () => {
+  assert.deepEqual(control('!tomato soon'), { kind: 'start', seconds: 30 });
+  assert.deepEqual(control('!tomato !!'), { kind: 'start', seconds: 30 });
 });
 
-// Entries arrive already lowercased from readConfig, which is what makes comparing
-// against a lowercased login enough; config.test.mjs pins that end of the contract.
-test('an allow-listed viewer can start a round without a mod badge', () => {
-  assert.equal(parseCommand(viewer('!tomato 60'), '!tomato', 30, ['someviewer']), 60);
-  assert.equal(parseCommand(viewer('!tomato 60', 'SomeViewer'), '!tomato', 30, ['someviewer']), 60);
-  assert.equal(parseCommand(viewer('!tomato 60'), '!tomato', 30, ['anotherperson']), null);
+test('trailing junk after the number is tolerated', () => {
+  assert.deepEqual(control('!tomato 60s'), { kind: 'start', seconds: 60 });
+  assert.deepEqual(control('!tomato 60 please'), { kind: 'start', seconds: 60 });
+});
+
+test('extra whitespace and casing do not matter', () => {
+  assert.deepEqual(control('  !TOMATO   60  '), { kind: 'start', seconds: 60 });
 });
 
 test('the command must be the first word, not merely present', () => {
-  assert.equal(parseCommand(mod('hey !tomato 60'), '!tomato', 30), null);
-  assert.equal(parseCommand(mod('!tomatoes'), '!tomato', 30), null);
+  assert.equal(control('hey !tomato 60'), null);
+  assert.equal(control('!tomatoes'), null);
 });
 
 test('a custom command from the URL is honoured', () => {
-  assert.equal(parseCommand(mod('!splat 45'), '!splat', 30), 45);
-  assert.equal(parseCommand(mod('!tomato 45'), '!splat', 30), null);
+  assert.deepEqual(control('!splat 45', { command: '!splat' }), { kind: 'start', seconds: 45 });
+  assert.equal(control('!tomato 45', { command: '!splat' }), null);
 });
 
 // --- extending a round ------------------------------------------------------
 
 test('a plus sign adds that many seconds', () => {
-  assert.equal(parseExtend(mod('!tomato +30'), '!tomato', 30), 30);
-  assert.equal(parseExtend(mod('!tomato +60'), '!tomato', 30), 60);
+  assert.deepEqual(control('!tomato +30'), { kind: 'extend', seconds: 30 });
+  assert.deepEqual(control('!tomato +60'), { kind: 'extend', seconds: 60 });
 });
 
 test('the word forms extend too, with or without a number', () => {
   for (const word of ['more', 'extend', 'add', 'longer']) {
-    assert.equal(parseExtend(mod(`!tomato ${word}`), '!tomato', 30), 30, word);
-    assert.equal(parseExtend(mod(`!tomato ${word} 45`), '!tomato', 30), 45, word);
+    assert.deepEqual(control(`!tomato ${word}`), { kind: 'extend', seconds: 30 }, word);
+    assert.deepEqual(control(`!tomato ${word} 45`), { kind: 'extend', seconds: 45 }, word);
   }
 });
 
 test('an extension with no readable number falls back to the default', () => {
-  assert.equal(parseExtend(mod('!tomato +'), '!tomato', 30), 30);
-  assert.equal(parseExtend(mod('!tomato +soon'), '!tomato', 30), 30);
-  assert.equal(parseExtend(mod('!tomato more please'), '!tomato', 30), 30);
+  assert.deepEqual(control('!tomato +'), { kind: 'extend', seconds: 30 });
+  assert.deepEqual(control('!tomato +soon'), { kind: 'extend', seconds: 30 });
+  assert.deepEqual(control('!tomato more please'), { kind: 'extend', seconds: 30 });
 });
 
 test('an extension is bounded above like every other duration', () => {
-  assert.equal(parseExtend(mod('!tomato +99999'), '!tomato', 30), 600);
+  assert.deepEqual(control('!tomato +99999'), { kind: 'extend', seconds: 600 });
 });
 
 // An extension is a delta, not a round length, so it does NOT get the MIN_DURATION
 // floor. It did at first, and `!tomato +2` silently added five seconds instead of two
 // -- the command appeared to work, just not by the amount that was asked for.
 test('a small extension adds what was asked, not a five-second minimum', () => {
-  assert.equal(parseExtend(mod('!tomato +1'), '!tomato', 30), 1);
-  assert.equal(parseExtend(mod('!tomato +2'), '!tomato', 30), 2);
-  assert.equal(parseExtend(mod('!tomato +4'), '!tomato', 30), 4);
-  assert.equal(parseExtend(mod('!tomato add 3'), '!tomato', 30), 3);
+  for (const [text, seconds] of [['+1', 1], ['+2', 2], ['+4', 4], ['add 3', 3]]) {
+    assert.deepEqual(control(`!tomato ${text}`), { kind: 'extend', seconds }, text);
+  }
 });
 
 // A round length still has the floor: the two clamps must not drift back together.
 test('a round length keeps its five-second floor', () => {
-  assert.equal(parseCommand(mod('!tomato 2'), '!tomato', 30), 5);
+  assert.deepEqual(control('!tomato 2'), { kind: 'start', seconds: 5 });
 });
 
-test('a plain start command is not an extension', () => {
-  assert.equal(parseExtend(mod('!tomato'), '!tomato', 30), null);
-  assert.equal(parseExtend(mod('!tomato 60'), '!tomato', 30), null);
-  assert.equal(parseExtend(mod('!tomato stop'), '!tomato', 30), null);
-});
-
-test('non-mods cannot extend a round', () => {
-  assert.equal(parseExtend(viewer('!tomato +30'), '!tomato', 30), null);
-  assert.equal(parseExtend(viewer('!tomato +30'), '!tomato', 30, ['someviewer']), 30);
-});
-
-// The `!tomato stop` bug in another costume: parseInt reads "+30" as 30, so without
-// an explicit guard an extend would silently start a fresh round instead of adding to
-// the one running -- wiping the screen rather than keeping it. Pin both halves, and
-// the overlay's ordering (extend checked first) with them.
-test('!tomato +30 extends and never starts', () => {
-  const msg = mod('!tomato +30');
-  assert.equal(parseExtend(msg, '!tomato', 30), 30);
-  assert.equal(parseCommand(msg, '!tomato', 30), null);
-});
-
-test('the word forms never start a round either', () => {
-  for (const word of ['more', 'extend', 'add', 'longer']) {
-    assert.equal(parseCommand(mod(`!tomato ${word}`), '!tomato', 30), null, word);
-    assert.equal(parseCommand(mod(`!tomato ${word} 45`), '!tomato', 30), null, word);
+test('a plain start command is never read as an extension', () => {
+  for (const text of ['!tomato', '!tomato 60', '!tomato stop']) {
+    assert.notEqual(control(text)?.kind, 'extend', text);
   }
 });
 
 // --- ending a round ---------------------------------------------------------
 
 test('the dedicated cancel command ends a round', () => {
-  assert.equal(isCancel(mod('!wipe'), '!wipe', '!tomato'), true);
+  assert.deepEqual(control('!wipe'), { kind: 'cancel' });
 });
 
 test('the start command plus a stop word also ends a round', () => {
   for (const word of ['stop', 'cancel', 'end', 'wipe', 'clear']) {
-    assert.equal(isCancel(mod(`!tomato ${word}`), '!wipe', '!tomato'), true, word);
+    assert.deepEqual(control(`!tomato ${word}`), { kind: 'cancel' }, word);
   }
 });
 
 test('a plain start command is not a cancel', () => {
-  assert.equal(isCancel(mod('!tomato'), '!wipe', '!tomato'), false);
-  assert.equal(isCancel(mod('!tomato 60'), '!wipe', '!tomato'), false);
+  assert.equal(control('!tomato').kind, 'start');
+  assert.equal(control('!tomato 60').kind, 'start');
 });
 
-test('non-mods cannot cancel', () => {
-  assert.equal(isCancel(viewer('!wipe'), '!wipe', '!tomato'), false);
-  assert.equal(isCancel(viewer('!wipe'), '!wipe', '!tomato', ['someviewer']), true);
+// The whole point of one parser: a subcommand cannot also be seen as a duration, so
+// `!tomato stop` and `!tomato +30` can never start a round no matter what order a
+// caller checks things in.
+test('a subcommand is never also a start', () => {
+  assert.equal(control('!tomato stop').kind, 'cancel');
+  assert.equal(control('!tomato +30').kind, 'extend');
+  assert.equal(control('!tomato more').kind, 'extend');
 });
 
-// `!tomato stop` satisfies both predicates' command word, so the overlay's ordering
-// (cancel checked first) is what stops it starting a round. Pin both halves.
-test('!tomato stop cancels and never starts', () => {
-  const msg = mod('!tomato stop');
-  assert.equal(isCancel(msg, '!wipe', '!tomato'), true);
-  assert.equal(parseCommand(msg, '!tomato', 30), null);
+// --- permissions ------------------------------------------------------------
+
+test('non-mods cannot start, extend or cancel', () => {
+  for (const text of ['!tomato', '!tomato 60', '!tomato +30', '!wipe']) {
+    assert.equal(parseControl(viewer(text), CONF), null, text);
+  }
+});
+
+// Entries arrive already lowercased from readConfig, which is what makes comparing
+// against a lowercased login enough; config.test.mjs pins that end of the contract.
+test('an allow-listed viewer controls the overlay without a mod badge', () => {
+  const allowed = { ...CONF, allow: ['someviewer'] };
+  assert.deepEqual(parseControl(viewer('!tomato 60'), allowed), { kind: 'start', seconds: 60 });
+  assert.deepEqual(parseControl(viewer('!tomato 60', 'SomeViewer'), allowed), { kind: 'start', seconds: 60 });
+  assert.deepEqual(parseControl(viewer('!wipe'), allowed), { kind: 'cancel' });
+  assert.equal(parseControl(viewer('!tomato 60'), { ...CONF, allow: ['anotherperson'] }), null);
 });
 
 // --- the throw trigger ------------------------------------------------------

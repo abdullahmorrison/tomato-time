@@ -4,7 +4,7 @@ import {
   readConfig, clampDuration, normalizeChannel,
   DEFAULTS, DEFAULT_ALLOW, CORNERS, MIN_DURATION, MAX_DURATION,
 } from '../src/config.js';
-import { parseCommand } from '../src/twitch-chat.js';
+import { parseControl } from '../src/twitch-chat.js';
 
 test('an empty URL yields the documented defaults', () => {
   const c = readConfig('');
@@ -57,7 +57,10 @@ test('clampDuration holds any source to one range', () => {
 // still agree, so `!tomato 900` and ?duration=900 can never mean different things.
 test('a duration means the same thing from the URL as from chat', () => {
   const fromChat = (text) =>
-    parseCommand({ login: 'm', text, isMod: true, isBroadcaster: false }, '!tomato', 30);
+    parseControl(
+      { login: 'm', text, isMod: true, isBroadcaster: false },
+      { command: '!tomato', cancel: '!wipe', duration: 30 },
+    ).seconds;
   for (const value of ['5', '30', '60', '600', '1', '0', '99999']) {
     assert.equal(
       readConfig(`?duration=${value}`).duration,

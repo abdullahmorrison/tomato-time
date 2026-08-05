@@ -1,5 +1,5 @@
 import { readConfig } from './config.js';
-import { TwitchChat, countTriggers, parseCommand, parseExtend, isCancel } from './twitch-chat.js';
+import { TwitchChat, countTriggers, parseControl } from './twitch-chat.js';
 import { TomatoShow } from './round.js';
 import { tomatoSprite } from './sprite.js';
 
@@ -63,23 +63,11 @@ if (config.channel) {
       setStatus(`Ready — reading #${config.channel}. Type ${config.command} to start.`);
     }
 
-    // Checked before the start command, so `!tomato stop` cannot start a round.
-    if (isCancel(message, config.cancel, config.command, config.allow)) {
-      show.cancel();
-      return;
-    }
-
-    // Also checked before the start command: `!tomato +30` reads as a perfectly good
-    // request to start a 30-second round if it gets that far.
-    const extra = parseExtend(message, config.command, config.duration, config.allow);
-    if (extra !== null) {
-      show.extend(extra);
-      return;
-    }
-
-    const requested = parseCommand(message, config.command, config.duration, config.allow);
-    if (requested !== null) {
-      show.start(requested);
+    const control = parseControl(message, config);
+    if (control) {
+      if (control.kind === 'cancel') show.cancel();
+      else if (control.kind === 'extend') show.extend(control.seconds);
+      else show.start(control.seconds);
       return;
     }
 

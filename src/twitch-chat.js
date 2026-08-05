@@ -182,86 +182,60 @@ export function countTriggers(text, word, cap = Infinity) {
   return Math.min(count, cap);
 }
 
-/**
- * If this message is the start command from someone allowed to use it, return the
- * requested round length in seconds (or null).
- *
- * `allow` lists logins that may start a round whatever badges they hold, so the
- * overlay can be triggered on a channel where they are not a moderator.
- */
-export function parseCommand(message, command, defaultDuration, allow = []) {
-  if (!canControl(message, allow)) return null;
-  const parts = words(message.text);
-  if (parts[0] !== command) return null;
-  // `!tomato stop` ends a round. Without this it would fall through and read as a
-  // start with an unparseable duration, i.e. the exact opposite of what was asked.
-  if (STOP_WORDS.includes(parts[1])) return null;
-  // Same trap for `!tomato +30`: parseInt reads "+30" happily, so without this an
-  // extend would start a fresh 30-second round the moment one was not already running.
-  if (extendArg(parts) !== null) return null;
-
-  // Same clamp as the URL param, so `!tomato 900` and ?duration=900 cannot disagree.
-  return clampDuration(parts[1], defaultDuration);
-}
-
-/**
- * If this message asks for the round in progress to run longer, return how many extra
- * seconds it should get (or null).
- *
- * Accepts `!tomato +30`, a bare `!tomato more`, and `!tomato extend 15`. A round is
- * routinely worth more time than it was given, and the alternative -- wiping and
- * starting again -- clears the screen, which is the opposite of what is wanted.
- */
-export function parseExtend(message, command, defaultDuration, allow = []) {
-  if (!canControl(message, allow)) return null;
-  const parts = words(message.text);
-  if (parts[0] !== command) return null;
-  const arg = extendArg(parts);
-  if (arg === null) return null;
-  // Bounded above like every other duration, but with no five-second floor: see
-  // clampExtension.
-  return clampExtension(arg, defaultDuration);
-}
-
-/**
- * The seconds argument of an extend request, or null if this is not one. `+30` carries
- * its own number; a word form takes the next word, and either yields '' when the number
- * is missing so the caller falls back to the default.
- *
- * Absent has to read as '' and not as null: a bare `!tomato more` is a real extend
- * request, and sharing one sentinel with "not an extend request" would send it on to be
- * read as a start -- wiping the screen instead of adding to what is on it.
- */
-function extendArg(parts) {
-  const arg = parts[1] || '';
-  if (arg.startsWith('+')) return arg.slice(1);
-  if (EXTEND_WORDS.includes(arg)) return parts[2] || '';
-  return null;
-}
+// --- commands ---------------------------------------------------------------
+//
+// One parser, not a predicate per command. Both bugs this has had were a subcommand
+// falling through to be read as a duration: `!tomato stop` started a round whose
+// duration failed to parse, and `!tomato +30` did the same, because parseInt takes
+// "+30" happily. Guarding a start parser against each new subcommand only holds as
+// long as every caller also asks the other parsers first, in the right order -- and
+// that ordering is invisible at the call site. Deciding once, here, is what makes the
+// whole class impossible rather than patched; the next subcommand is a line in this
+// function instead of a guard elsewhere plus a rule nobody can see.
 
 const STOP_WORDS = ['stop', 'cancel', 'end', 'wipe', 'clear'];
 const EXTEND_WORDS = ['more', 'extend', 'add', 'longer'];
 
-function words(text) {
-  return text.trim().toLowerCase().split(/\s+/);
+/**
+ * What this message asks the overlay to do, or null if it asks for nothing.
+ *
+ *   { kind: 'cancel' }           end the round now and wipe the screen
+ *   { kind: 'extend', seconds }  give the round in progress more time
+ *   { kind: 'start', seconds }   begin a round
+ *
+ * Reads `command`, `cancel`, `duration` and `allow` off the overlay config. `allow`
+ * lists logins that may control the overlay whatever badges they hold, so it can be
+ * triggered on a channel where they are not a moderator.
+ */
+export function parseControl(message, { command, cancel, duration, allow = [] }) {
+  if (!canControl(message, allow)) return null;
+
+  const [name, arg, arg2] = message.text.trim().toLowerCase().split(/\s+/);
+  if (name === cancel) return { kind: 'cancel' };
+  if (name !== command) return null;
+
+  // Subcommands are matched before anything reaches a clamp, so a word can never be
+  // read as a number and come back as the default.
+  if (STOP_WORDS.includes(arg)) return { kind: 'cancel' };
+  // `!tomato +30` carries its number; the word forms take the next token. Either way a
+  // missing or unreadable number falls back to the default round length.
+  if (arg?.startsWith('+')) return extendBy(arg.slice(1), duration);
+  if (EXTEND_WORDS.includes(arg)) return extendBy(arg2, duration);
+
+  // Same clamp as the URL param, so `!tomato 900` and ?duration=900 cannot disagree.
+  return { kind: 'start', seconds: clampDuration(arg, duration) };
 }
 
-/** Whether this person is allowed to start or end a round. */
+// Bounded above like a round length, but with no five-second floor: see clampExtension.
+function extendBy(value, duration) {
+  return { kind: 'extend', seconds: clampExtension(value, duration) };
+}
+
+/** Whether this person is allowed to control the overlay at all. */
 export function canControl(message, allow = []) {
   return (
     message.isMod ||
     message.isBroadcaster ||
     allow.includes(message.login.toLowerCase())
   );
-}
-
-/**
- * True if this message ends the round early. Accepts the dedicated cancel command
- * and, for convenience, `<start command> stop` and its synonyms.
- */
-export function isCancel(message, cancelCommand, startCommand, allow = []) {
-  if (!canControl(message, allow)) return false;
-  const parts = words(message.text);
-  if (parts[0] === cancelCommand) return true;
-  return parts[0] === startCommand && STOP_WORDS.includes(parts[1]);
 }
